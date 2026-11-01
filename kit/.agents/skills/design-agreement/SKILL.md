@@ -7,6 +7,8 @@ description: 구현 전에 현업 담당자와 합의할 문서(문제, 성공 �
 
 구현보다 합의가 먼저다. 무엇을 만들지 않을지까지 정해 두어야 에이전트가 범위를 넓히지 않고, 나중에 검증할 기준도 생긴다.
 
+**권장 모델·effort:** 6.1 Sol / high. 확정 내용의 정리·확인 메시지 편집은 medium. xhigh는 `AGENTS.md`의 전환 기준에 해당하는 미해결 핵심 결정에만 쓴다. 여기서 합의한 최소 설계는 BUILD에 넘기며, BUILD에서는 구현에 필요한 빈칸만 구체화한다.
+
 ## 1. 합의문 작성 (약 10분)
 
 `assets/AGREEMENT.md`를 `docs/AGREEMENT.md`로 복사하고 `docs/INTERVIEW.md`를 근거로 채운다.
