@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# 작업 공간에서: bash .agents/setup.sh [--refresh-times] <시작 HH:MM> <작업 분> [과제 마감 상한 HH:MM]
-# 같은 날의 시각을 사용한다. 플랫폼 타이머가 최종 기준이며 알림은 실행하지 않는다.
+# 작업 공간에서: bash .agents/setup.sh [--refresh-times] <시작 HH:MM> <작업 분> [종료 상한 HH:MM]
+# 같은 날의 작업 구간을 사용한다. 알림이나 타이머는 실행하지 않는다.
 set -euo pipefail
 
 fail() { echo "[error] $*" >&2; exit 1; }
 REFRESH=0
 if [ "${1:-}" = --refresh-times ]; then REFRESH=1; shift; fi
-[ "$#" -ge 2 ] && [ "$#" -le 3 ] || fail "사용법: bash .agents/setup.sh [--refresh-times] <시작 HH:MM> <작업 분> [과제 마감 상한 HH:MM]"
+[ "$#" -ge 2 ] && [ "$#" -le 3 ] || fail "사용법: bash .agents/setup.sh [--refresh-times] <시작 HH:MM> <작업 분> [종료 상한 HH:MM]"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
@@ -20,24 +20,24 @@ tomin() {
 }
 S="$(tomin "$1")" || fail "시작 시각은 00:00~23:59여야 합니다: $1"
 # 선행 0은 허용하되 산술 전에 길이와 범위를 제한한다.
-[[ "$2" =~ ^0*([1-9][0-9]{0,3})$ ]] || fail "작업 분은 1~180의 십진수여야 합니다."
+[[ "$2" =~ ^0*([1-9][0-9]{0,3})$ ]] || fail "작업 분은 1~1439의 십진수여야 합니다."
 BUILD=$((10#${BASH_REMATCH[1]}))
-[ "$BUILD" -le 180 ] || fail "대회 과제 작업 시간은 최대 180분입니다."
+[ "$BUILD" -le 1439 ] || fail "작업 분은 1~1439여야 합니다. 여러 날의 작업은 세션별로 나누어 계획하세요."
 E=$((S + BUILD)); CAP_NOTE=""
 if [ "$#" -eq 3 ]; then
-  C="$(tomin "$3")" || fail "마감 상한은 00:00~23:59여야 합니다: $3"
-  [ "$C" -gt "$S" ] || fail "마감 상한은 같은 날의 시작 시각보다 늦어야 합니다."
+  C="$(tomin "$3")" || fail "종료 상한은 00:00~23:59여야 합니다: $3"
+  [ "$C" -gt "$S" ] || fail "종료 상한은 같은 날의 시작 시각보다 늦어야 합니다."
   if [ "$E" -gt "$C" ]; then E=$C; fi
-  CAP_NOTE=" (과제 마감 상한 $(hhmm "$C"))"
+  CAP_NOTE=" (종료 상한 $(hhmm "$C"))"
 fi
-[ "$E" -le 1439 ] || fail "날짜를 넘는 일정은 지원하지 않습니다. 같은 날의 과제 마감 상한을 지정하세요."
+[ "$E" -le 1439 ] || fail "날짜를 넘는 일정은 지원하지 않습니다. 같은 날의 종료 상한을 지정하세요."
 D=$((E - S)); PREP=$((E - 10)); STAGE=SETUP
 if [ "$PREP" -lt "$S" ]; then PREP=$S; fi
 if [ "$D" -le 10 ]; then
   STAGE=WRAP
-  echo "[warn] 작업 시간이 10분 이하입니다. 바로 제출 준비를 시작하세요."
+  echo "[warn] 작업 시간이 10분 이하입니다. 바로 마무리를 시작하세요."
 fi
-if [ "$D" -lt "$BUILD" ]; then echo "[warn] 마감 상한에 맞춰 작업 시간을 ${D}분으로 줄였습니다."; fi
+if [ "$D" -lt "$BUILD" ]; then echo "[warn] 종료 상한에 맞춰 작업 시간을 ${D}분으로 줄였습니다."; fi
 T_START=$(hhmm "$S"); T_END=$(hhmm "$E"); T_PREP=$(hhmm "$PREP")
 T15=$(hhmm $((S + D * 15 / 100))); T23=$(hhmm $((S + D * 23 / 100))); T45=$(hhmm $((S + D * 45 / 100)))
 T80=$(hhmm $((S + D * 80 / 100))); T85=$(hhmm $((S + D * 85 / 100)))
@@ -46,7 +46,7 @@ TIME_LINE="- 작업 시간: ${T_START} ~ ${T_END}${CAP_NOTE}"
 PLAN_LINE="- 체크포인트: ${PLAN}"
 
 # 입력 검증이 끝난 뒤에만 작업 공간을 변경한다.
-command -v git >/dev/null 2>&1 || fail "git이 없습니다. 제공 환경을 확인하세요."
+command -v git >/dev/null 2>&1 || fail "git이 없습니다. 작업 환경을 확인하세요."
 [ ! -L docs ] && [ ! -L docs/STATE.md ] || fail "docs 또는 STATE.md가 심볼릭 링크입니다. 실제 작업 경로를 확인하세요."
 if [ -e docs ] && [ ! -d docs ]; then fail "docs가 디렉터리가 아닙니다."; fi
 if [ -e docs/STATE.md ] && [ ! -f docs/STATE.md ]; then fail "docs/STATE.md가 일반 파일이 아닙니다."; fi
@@ -60,7 +60,7 @@ if [ -f docs/STATE.md ]; then
   if grep -Fxq -- "$TIME_LINE" docs/STATE.md && grep -Fxq -- "$PLAN_LINE" docs/STATE.md; then
     echo "[skip] 같은 일정입니다. 기존 STATE를 보존합니다."
   else
-    [ "$REFRESH" -eq 1 ] || fail "STATE의 일정이 다르거나 미완성입니다. 플랫폼 시간을 확인하고 --refresh-times로 시각만 갱신하세요."
+    [ "$REFRESH" -eq 1 ] || fail "STATE의 일정이 다르거나 미완성입니다. 작업 일정을 확인하고 --refresh-times로 시각만 갱신하세요."
     STATE_TMP=$(mktemp docs/.STATE.XXXXXX)
     awk -v times="$TIME_LINE" -v plan="$PLAN_LINE" '
       /^- 작업 시간:/ { print times; next }
@@ -76,7 +76,7 @@ else
   cat > "$STATE_TMP" <<STATE
 # STATE
 
-## 필수 산출물 (공식 과제 문서의 파일명·경로·내용을 빠짐없이 옮겨 적기)
+## 필수 산출물 (프로젝트 요구사항의 파일명·경로·내용을 빠짐없이 옮겨 적기)
 
 - [ ]
 
@@ -91,10 +91,10 @@ ${PLAN_LINE}
 
 ## 시간 기준
 
-- 위 일정은 과제 작업용이며 플랫폼 타이머가 우선한다. 자동 알림은 없다.
-- 과제는 최대 180분, 후속 서술형은 별도 30분이며 준비 대기도 필요하다.
-- 모든 단계는 14:00에 종료된다. 늦게 시작했다면 서술형·대기 시간을 남긴 과제 마감 상한을 정한다.
-- 제출물 확정 후 에이전트 작업을 종료하고, 실제 서술형에는 AI를 사용하지 않는다.
+- 위 일정은 이번 작업 구간의 계획이다. 자동 알림은 없다.
+- 종료 10분 전에는 산출물·검증 결과·인수인계 문서를 정리한다.
+- 일정이 바뀌면 --refresh-times로 시각을 갱신하고 현재 단계와 다음 체크포인트를 확인한다.
+- 여러 날의 작업은 세션별로 나누고, 다음 세션의 시작점을 HANDOFF에 남긴다.
 STATE
   mv "$STATE_TMP" docs/STATE.md
   STATE_TMP=""
@@ -118,4 +118,4 @@ fi
 if [ -z "$(git config user.email 2>/dev/null || true)" ] || [ -z "$(git config user.name 2>/dev/null || true)" ]; then
   echo "[warn] git 작성자 정보 미설정 — 커밋 전에 저장소 로컬 user.name / user.email을 확인하세요."
 fi
-echo "완료. 제공 Codex 실행 → /status, /model, /skills와 지침 로딩 확인 → 공식 과제 문서를 읽고 진행하세요."
+echo "완료. Codex 실행 → /status, /model, /skills와 지침 로딩 확인 → 프로젝트 요구사항을 읽고 진행하세요."

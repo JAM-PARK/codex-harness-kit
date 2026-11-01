@@ -53,9 +53,24 @@ class SetupTests(WorkspaceTest):
         self.assert_success(self.setup('08:00', '0180'))
         self.assertIn('08:00 ~ 11:00', self.state.read_text())
 
+    def test_long_work_session(self):
+        self.assert_success(self.setup('09:00', '480'))
+        state = self.state.read_text()
+        for text in ('09:00 ~ 17:00', '15%) 10:12', '23%) 10:50',
+                     '45%) 12:36', '80%) 15:24', '85%) 15:48', '마감 준비 16:50'):
+            self.assertIn(text, state)
+
+    def test_latest_same_day_end(self):
+        self.assert_success(self.setup('00:00', '1439'))
+        self.assertIn('00:00 ~ 23:59', self.state.read_text())
+
+    def test_cap_keeps_long_session_in_same_day(self):
+        self.assert_success(self.setup('20:00', '480', '23:00'))
+        self.assertIn('20:00 ~ 23:00', self.state.read_text())
+
     def test_invalid_input_has_no_side_effects(self):
         cases = [(), ('10:00',), ('25:00', '180'), ('10:99', '180'),
-                 ('10:00', 'oops'), ('10:00', '0'), ('10:00', '-1'), ('10:00', '181'),
+                 ('10:00', 'oops'), ('10:00', '0'), ('10:00', '-1'), ('00:00', '1440'),
                  ('10:00', '99999999999999999999'), ('10:00', '180', '13:60'),
                  ('10:00', '180', '09:00'), ('10:00', '180', '10:00'),
                  ('10:00', '180', ''), ('23:50', '180'),

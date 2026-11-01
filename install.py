@@ -77,7 +77,7 @@ def install(target):
         finally:
             temp.unlink(missing_ok=True)
     print(f'[ok] 설치 확인: {target} (새 파일 {len(copies)}개, 중복 지침 없음)')
-    print('제공 Codex를 작업 루트에서 시작해 로딩된 지침·스킬과 기존 규칙의 충돌을 확인하세요.')
+    print('Codex를 작업 루트에서 시작해 로딩된 지침·스킬과 기존 규칙의 충돌을 확인하세요.')
 
 
 def main():
