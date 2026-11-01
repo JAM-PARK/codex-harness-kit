@@ -5,7 +5,9 @@ description: SETUP에서 프로젝트 README·필수 산출물과 데이터셋�
 
 # Discovery Interview
 
-**권장 모델·effort:** 6.1 Sol / medium. 모순되는 증거 때문에 문제 정의를 다시 판단해야 할 때만 해당 분석을 high로 올린다. 실제 설정 확인은 `AGENTS.md`의 전환 규칙을 따른다.
+**권장 모델·effort:** 6.1 Sol / medium을 기본으로 한다. 모순되는 증거 해석이나 아래 최적화·머신러닝 문제 정의는 high로 올린다. 실제 설정 확인은 `AGENTS.md`의 전환 규칙을 따른다.
+
+최적화·머신러닝의 목적·제약·라벨·평가 규칙을 도출할 때는 high를 권장한다. CSV 구조 점검·환경 조사는 medium을 유지한다. 이 경우 `.agents/skills/design-agreement/references/algorithm-selection.md`의 입력 계약·문제 정의와 과정별 effort를 읽고 적용한다.
 
 ## 역할 분담 (가장 중요)
 
